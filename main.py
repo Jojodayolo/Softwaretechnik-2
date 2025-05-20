@@ -9,12 +9,12 @@ cloner.process_repo(repo, "output.txt")
 print(f"Repository geklont und verarbeitet.")
 
 # Usage        
-reader = FileReader("output.txt")
-try:
-    content = reader.read()
-    print("Dateiinhalt:\n", content)
-except Exception as e:
-    print(e)
+#reader = FileReader("output.txt")
+#try:
+#    content = reader.read()
+#    print("Dateiinhalt:\n", content)
+#except Exception as e:
+#    print(e)
 
 #bot = DeepSeekAPIConnector(model="deepseek-chat")
 #answer = bot.ask("das ist der deepseek-chat test, sag mir ob der geht")
@@ -28,12 +28,13 @@ content = """
 Stell dir vor du bist ein Test Automation Engineer und nachfolgend bekommst du ein Repository mit Code.
 Anhand dieses Codes sollst du python unit tests erstellen, die das Frontend per Selenium testen
 Gebe den Selenium Code zwischen -Start- und -End- ein sodass der code automatisch geparsed werden kann.
-Hier der Code des Repositorys.
-""" + content
-answer = bot.ask(content)
+"""
+answer = bot.ask_with_file(content, "output.txt")
 parser = ResponseParser()
-answer = parser.parseResponse(answer)
+#answer = parser.parseResponse(answer)
+print(answer)
+#with open("code.txt", "w", encoding="utf-8") as file:
+#    file.write(answer)
 
-with open("code.txt", "w", encoding="utf-8") as file:
-    file.write(answer)
+
 

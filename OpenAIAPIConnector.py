@@ -42,13 +42,19 @@ class OpenAIAPIConnector:
         file_id = self.upload_file_for_assistant(file_path)
 
         # 1. Assistant erstellen
-        assistant = self.client.beta.assistants.create(
-            name="File Assistant",
-            instructions="Beantworte Fragen auf Basis der bereitgestellten Datei.",
-            tools=[{"type": "code_interpreter"}],
-            model=self.model
-        )
 
+        assistant = self.client.beta.assistants.create(
+        name="File Assistant",
+        description="YBeantworte Fragen auf Basis der bereitgestellten Datei..",
+        model=self.model,
+        tools=[{"type": "code_interpreter"}],
+        tool_resources={
+            "code_interpreter": {
+            "file_ids": [file_id]
+            }
+        }
+        )
+        
         # 2. Thread erstellen
         thread = self.client.beta.threads.create()
 
@@ -57,7 +63,12 @@ class OpenAIAPIConnector:
             thread_id=thread.id,
             role="user",
             content=prompt,
-            file_ids=[file_id]
+            attachments=[
+                {
+                    "file_id": file_id,
+                    "tools": [{"type": "code_interpreter"}]
+                }
+            ]
         )
 
         # 4. Run starten
