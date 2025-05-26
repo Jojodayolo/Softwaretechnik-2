@@ -45,7 +45,7 @@ class OpenAIAPIConnector:
 
         assistant = self.client.beta.assistants.create(
         name="File Assistant",
-        description="YBeantworte Fragen auf Basis der bereitgestellten Datei..",
+        description="Beantworte Frage anhand des bereitgestellten Code / File",
         model=self.model,
         tools=[{"type": "code_interpreter"}],
         tool_resources={

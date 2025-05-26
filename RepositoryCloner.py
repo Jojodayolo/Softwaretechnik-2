@@ -20,7 +20,7 @@ class RepositoryCloner:
         with open(output_file, 'w', encoding='utf-8') as out_file:
             for root, _, files in os.walk(repo_path):
                 for file in files:
-                    if file.endswith('.html') or file.endswith('.js'):
+                    if file.endswith('.html') or file.endswith('.js') or file.endswith('.pug'):
                         file_path = os.path.join(root, file)
                         try:
                             relative_path = os.path.relpath(file_path, repo_path)
