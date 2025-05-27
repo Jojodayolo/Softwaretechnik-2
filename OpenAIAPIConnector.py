@@ -1,95 +1,149 @@
 import os
 import time
+import re
 from dotenv import load_dotenv
 from openai import OpenAI
 
-#gpt-4o-mini
 class OpenAIAPIConnector:
-    def __init__(self,  model: str):
-        load_dotenv()  
+    def __init__(self, model: str):
+        load_dotenv()
         self.api_key = os.getenv("OPENAI_API_KEY")
+        if not self.api_key:
+            raise ValueError("OPENAI_API_KEY nicht gefunden! .env überprüfen.")
         self.model = model
         self.client = OpenAI(api_key=self.api_key)
 
-
-    def ask(self, prompt: str) -> str:        
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant"},
-                {"role": "user", "content": prompt},
-            ],
-            stream=False
-        )
-        return response.choices[0].message.content
-    
     def upload_file_for_assistant(self, file_path: str) -> str:
-        """
-        Lädt eine Datei für die Assistants-API hoch und gibt die file_id zurück.
-        """
         with open(file_path, "rb") as f:
             uploaded_file = self.client.files.create(
                 file=f,
                 purpose="assistants"
             )
         print(f"Datei hochgeladen. file_id: {uploaded_file.id}")
+        time.sleep(2)
         return uploaded_file.id
 
-    def ask_with_file(self, prompt: str, file_path: str) -> str:
-        """
-        Stellt eine Frage unter Verwendung einer Datei über die Assistants-API.
-        """
-        file_id = self.upload_file_for_assistant(file_path)
-
-        # 1. Assistant erstellen
-
+    def _create_assistant(self, file_id: str) -> str:
         assistant = self.client.beta.assistants.create(
-        name="File Assistant",
-        description="Beantworte Frage anhand des bereitgestellten Code / File",
-        model=self.model,
-        tools=[{"type": "code_interpreter"}],
-        tool_resources={
-            "code_interpreter": {
-            "file_ids": [file_id]
+            name="Test Generator Assistant",
+            description=(
+                "Analysiere alle Dateien gründlich. "
+                "Identifiziere ALLE testbaren Features (z.B. Buttons, Links, Formulare, JS, Backend-Routen etc.). "
+                "Schreibe für jedes Feature mindestens einen Playwright-Test. "
+                "Wenn die Antwort zu lang wird, beende mit 'CONTINUE' und fahre auf Nachfrage fort."
+            ),
+            model=self.model,
+            tools=[{"type": "code_interpreter"}],
+            tool_resources={
+                "code_interpreter": {
+                    "file_ids": [file_id]
+                }
             }
-        }
         )
-        
-        # 2. Thread erstellen
-        thread = self.client.beta.threads.create()
+        print(f"Assistant erstellt. assistant_id: {assistant.id}")
+        return assistant.id
 
-        # 3. Message mit Datei senden
+    def _extract_assistant_response(self, thread_id):
+        # Holt die zuletzt gepostete Assistant-Antwort aus dem Thread
+        messages = self.client.beta.threads.messages.list(thread_id=thread_id)
+        for msg in messages.data:
+            if msg.role == "assistant":
+                answer = ""
+                for c in msg.content:
+                    if hasattr(c, "text") and hasattr(c.text, "value"):
+                        answer += c.text.value
+                return answer.strip()
+        return ""
+
+    def _should_continue(self, answer):
+        # Prüft, ob eine Fortsetzung erforderlich ist
+        patterns = [
+            r'continue\s*$',  # englisch
+            r'fortsetzung\s*$',  # deutsch
+            r'ich fahre fort',  # typisch deutsch
+            r'ich mache weiter', 
+            r'ich werde die analyse.*fortsetzen', 
+            r'ende der analyse', 
+            r'es sind keine weiteren features',  # Stop-Pattern
+        ]
+        answer_lower = answer.strip().lower()
+        # "CONTINUE" oder andere Signale am Ende der Antwort?
+        if any(re.search(p, answer_lower) for p in patterns):
+            # Aber: Wenn das Stop-Pattern gefunden wird, dann abbrechen!
+            if re.search(r'ende der analyse|es sind keine weiteren features', answer_lower):
+                return False
+            return True
+        return False
+
+    def ask_with_file(self, file_path: str) -> str:
+        file_id = self.upload_file_for_assistant(file_path)
+        assistant_id = self._create_assistant(file_id)
+
+        prompt = ("""
+        Die hochgeladene Datei enthält eine vollständige Webanwendung mit verschiedenen Routen, HTML- und JavaScript-Komponenten sowie Backend-Logik.
+
+        1. Analysiere ALLE enthaltenen Features, die automatisiert getestet werden können (z. B. Formulare, Uploads, Downloads, Authentifizierung, Dropdowns, dynamische Inhalte, Editor, etc.).
+        2. Erstelle für JEDES gefundene Feature einen ausführbaren Playwright-Test in PYTHON – nutze dazu das offizielle Playwright-Python-API (https://playwright.dev/python/).
+        3. Schreibe die Tests in einer einzigen Python-Datei im pytest-Format (`test_*.py`). Jede Testfunktion sollte selbsterklärend sein und einen sprechenden Namen haben.
+        4. Verwende für jeden Test die passenden Playwright-Selektoren. Schreibe die Imports und, falls nötig, Setup/Teardown mit.
+        5. Gib am Ende ausschließlich eine lauffähige Python-Datei mit allen Tests aus. 
+        6. Falls notwendig, kommentiere kurz den Zweck jedes Tests im Code.
+
+        Antworte bitte NUR mit dem Python-Code für die Testdatei, **keinen Fließtext**.
+        """
+        )
+
+        thread = self.client.beta.threads.create()
+        all_answers = []
+
+        # Initiale Message
         self.client.beta.threads.messages.create(
             thread_id=thread.id,
             role="user",
-            content=prompt,
-            attachments=[
-                {
-                    "file_id": file_id,
-                    "tools": [{"type": "code_interpreter"}]
-                }
-            ]
+            content=prompt
         )
 
-        # 4. Run starten
-        run = self.client.beta.threads.runs.create(
-            thread_id=thread.id,
-            assistant_id=assistant.id
-        )
-
-        # 5. Auf Antwort warten (Polling)
         while True:
-            run_status = self.client.beta.threads.runs.retrieve(
+            run = self.client.beta.threads.runs.create(
                 thread_id=thread.id,
-                run_id=run.id
+                assistant_id=assistant_id
             )
-            if run_status.status == "completed":
-                break
-            elif run_status.status in ["failed", "cancelled", "expired"]:
-                raise Exception(f"Run fehlgeschlagen: {run_status.status}")
-            time.sleep(1)
 
-        # 6. Antwort extrahieren
-        messages = self.client.beta.threads.messages.list(thread_id=thread.id)
-        last_message = messages.data[0]
-        return last_message.content[0].text.value
+            print("Warte auf die Antwort des Assistants...")
+            while True:
+                run_status = self.client.beta.threads.runs.retrieve(
+                    thread_id=thread.id,
+                    run_id=run.id
+                )
+                if run_status.status == "completed":
+                    break
+                elif run_status.status in ["failed", "cancelled", "expired"]:
+                    raise Exception(f"Run fehlgeschlagen: {run_status.status}")
+                time.sleep(2)
+
+            answer = self._extract_assistant_response(thread.id)
+            print("Antwort-Abschnitt empfangen.")
+            all_answers.append(answer)
+
+            if self._should_continue(answer):
+                # Nächster Durchgang, der Prompt kann gern leicht variieren
+                self.client.beta.threads.messages.create(
+                    thread_id=thread.id,
+                    role="user",
+                    content=(
+                        "Bitte fahre fort und analysiere weitere Features sowie generiere zusätzliche Playwright-Tests, wie im ersten Prompt beschrieben. "
+                        "Wenn erneut nötig, schreibe am Ende 'CONTINUE'."
+                    )
+                )
+                time.sleep(2)
+            else:
+                break
+
+        # Kombiniere alle Antworten, entferne mehrfaches "CONTINUE" am Ende
+        combined = "\n\n".join([re.sub(r'(continue|fortsetzung)\s*$', '', a, flags=re.IGNORECASE).strip() for a in all_answers])
+        return combined.strip()
+
+# --- Beispiel-Aufruf ---
+# connector = OpenAIAPIConnector(model="gpt-4o")
+# result = connector.ask_with_file("repository.txt")
+# print(result)

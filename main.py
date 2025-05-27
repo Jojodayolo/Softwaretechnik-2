@@ -4,11 +4,12 @@ from FileParser import FileReader
 from RepositoryCloner import RepositoryCloner
 import subprocess
 import os
+import re
 
 parser = ResponseParser()
 cloner = RepositoryCloner()
-repo = cloner.clone_repo("https://github.com/sahat/hackathon-starter.git")
-cloner.process_repo(repo, "output.txt")
+repo = cloner.clone_repo("https://github.com/saucelabs/the-internet.git")
+cloner.process_repo(repo, "repository.txt")
 print(f"Repository geklont und verarbeitet.")
 
 # Usage        
@@ -112,21 +113,43 @@ Hier der Code des Repositorys
 
 #print(content)
 #answer = bot.ask(content)
-content= "Analysiere den gesamten Inhalt der Datei und beschreibe mir worum es geht"
+content= """
+1. Analysiere die gesamte Datei.
+2. Liste zuerst ALLE testbaren Features (auch Buttons, Links, Menüs, Alerts, Validierungen, dynamische Listen, etc.) als Bullet-Points auf.
+3. Schreibe dann für jedes Feature mindestens einen Playwright-Test.
+4. Falls die Antwort zu lang wird, schreibe am Ende “FORTSETZUNG” und fahre beim nächsten Prompt fort.
 
-answer = bot.ask_with_file(content, "output.txt")
+"""
+answer = bot.ask_with_file("repository.txt")
 print(answer)
 
-answer = parser.parseResponse(answer)
-print(answer)
-if answer:    
-    with open("codetest.py", "w", encoding="utf-8") as file:
-        file.write(answer)
-    try:
-        venv_python = os.path.join(".venv", "Scripts", "python.exe") if os.name == "nt" else "venv/bin/python"
-        result = subprocess.run([venv_python, "codetest.py"], capture_output=True, text=True, check=True)
-        print("Testausgabe:\n", result.stdout)
-    except subprocess.CalledProcessError as e:
-        print("Fehler bei der Ausführung von codetest.py:")
-        print(e.stderr)
+# Extrahiere den Python-Code (zwischen ```python ... ```)
+py_blocks = re.findall(r"```python(.*?)```", answer, re.DOTALL)
+
+if not py_blocks:
+    # Fallback: Falls kein Markdown-Block, schreibe gesamte Antwort in Datei
+    py_code = answer.strip()
+else:
+    # Nimm alle gefundenen Blöcke (falls mehrere) und füge sie zusammen
+    py_code = "\n\n".join([b.strip() for b in py_blocks])
+
+# Speichere als pytest-Datei
+output_file = "test_playwright_assistant.py"
+with open(output_file, "w", encoding="utf-8") as f:
+    f.write(py_code)
+
+print(f"Alle generierten Playwright-Python-Tests wurden in {output_file} gespeichert!")
+
+#answer = parser.parseResponse(answer)
+#print(answer)
+#if answer:    
+#    with open("codetest.py", "w", encoding="utf-8") as file:
+#        file.write(answer)
+#    try:
+#        venv_python = os.path.join(".venv", "Scripts", "python.exe") if os.name == "nt" else "venv/bin/python"
+#        result = subprocess.run([venv_python, "codetest.py"], capture_output=True, text=True, check=True)
+#        print("Testausgabe:\n", result.stdout)
+#    except subprocess.CalledProcessError as e:
+#        print("Fehler bei der Ausführung von codetest.py:")
+#        print(e.stderr)
 
