@@ -1,5 +1,6 @@
 *.txt
-
+scraped_pages/** 
+.vscode/
 # Virtuelle Umgebung
 venv/
 .env
