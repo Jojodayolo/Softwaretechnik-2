@@ -80,15 +80,16 @@ class OpenAIAPIConnector:
         assistant_id = self._create_assistant(file_id)
 
         prompt = ("""
-        Die hochgeladene Datei enthält eine vollständige Webanwendung mit verschiedenen Routen, HTML- und JavaScript-Komponenten sowie Backend-Logik.
+        Die hochgeladene Datei enthält eine gescrapte Webanwendung mit verschiedenen Routen, HTML-Komponenten.
 
         1. Analysiere ALLE enthaltenen Features, die automatisiert getestet werden können (z. B. Formulare, Uploads, Downloads, Authentifizierung, Dropdowns, dynamische Inhalte, Editor, etc.).
-        2. Erstelle für JEDES gefundene Feature einen ausführbaren Playwright-Test in PYTHON – nutze dazu das offizielle Playwright-Python-API (https://playwright.dev/python/).
+        2. Erstelle für JEDES gefundene Feature einen ausführbaren Selenium-Test in PYTHON .
         3. Schreibe die Tests in einer einzigen Python-Datei im pytest-Format (`test_*.py`). Jede Testfunktion sollte selbsterklärend sein und einen sprechenden Namen haben.
-        4. Verwende für jeden Test die passenden Playwright-Selektoren. Schreibe die Imports und, falls nötig, Setup/Teardown mit.
+        4. Verwende für jeden Test die passenden Selenium-Selektoren. Schreibe die Imports und, falls nötig, Setup/Teardown mit.
         5. Gib am Ende ausschließlich eine lauffähige Python-Datei mit allen Tests aus. 
         6. Falls notwendig, kommentiere kurz den Zweck jedes Tests im Code.
-
+        7. Die URLS findest du immer am anfang jedes dateiabschnitts
+        8. Baue zwischen den aktionen waits ein, damit die tests erfolgreich durchlaufen
         Antworte bitte NUR mit dem Python-Code für die Testdatei, **keinen Fließtext**.
         """
         )

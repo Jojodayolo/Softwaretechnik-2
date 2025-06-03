@@ -4,6 +4,7 @@ from urllib.parse import urlparse, urljoin
 import requests
 from bs4 import BeautifulSoup
 from typing import Set, List
+import re
 
 
 def merge_files_with_filenames(directory: str, output_file: str):
@@ -15,6 +16,54 @@ def merge_files_with_filenames(directory: str, output_file: str):
                 with open(filepath, 'r', encoding='utf-8') as infile:
                     outfile.write(infile.read())
                 outfile.write('\n\n')  # Abstand zwischen Dateien
+
+
+def restore_url_string(safe_name: str) -> str:
+    """Konvertiert einen safe_filename (z. B. http_localhost_8080_ai.html) zurück zur URL."""
+    name = safe_name.rsplit('.', 1)[0]  # Entfernt Dateiendung wie .html
+
+    # Ersetze Protokoll
+    if name.startswith("http_"):
+        name = name.replace("http_", "http://", 1)
+    elif name.startswith("https_"):
+        name = name.replace("https_", "https://", 1)
+
+    # localhost_ → localhost:
+    name = name.replace("localhost_", "localhost:", 1)
+
+    # Alle weiteren Unterstriche nach dem Port durch / ersetzen
+    match = re.search(r'localhost:\d+', name)
+    if match:
+        end = match.end()
+        prefix = name[:end]
+        rest = name[end:].replace("_", "/")
+        name = prefix + rest
+    else:
+        # Fallback für andere Hosts
+        name = name.replace("_", "/")
+
+    return name
+
+def process_file(filepath: str, output_path: str = None):
+    """Liest eine Datei ein, ersetzt alle safe-Filenames durch rekonstruierte URLs."""
+    with open(filepath, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # Finde alle safe-Filenames wie http_localhost_8080_ai.html
+    matches = re.findall(r'\bhttps?_[\w\-_.]+\.html\b', content)
+
+    for match in matches:
+        restored = restore_url_string(match)
+        print(f"{match} → {restored}")
+        content = content.replace(match, restored)
+
+    if output_path:
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(content)
+        print(f"\nErgebnis gespeichert in: {output_path}")
+    else:
+        print("\nErsetzter Inhalt:\n")
+        print(content)
 
 
 def get_all_links(soup: BeautifulSoup, current_url: str, base_domain: str) -> Set[str]:
@@ -148,3 +197,4 @@ if __name__ == "__main__":
     main(start_url)
     # Beispielnutzung
     merge_files_with_filenames("G:\\uni\\Softwaretechnik-2\\scraped_pages", "zusammengefuegt.txt")
+    process_file("G:\\uni\\Softwaretechnik-2\\zusammengefuegt.txt", output_path="G:\\uni\\Softwaretechnik-2\\zusammengefuegtresult.txt")
