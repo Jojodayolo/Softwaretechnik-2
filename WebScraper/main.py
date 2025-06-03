@@ -5,6 +5,18 @@ import requests
 from bs4 import BeautifulSoup
 from typing import Set, List
 
+
+def merge_files_with_filenames(directory: str, output_file: str):
+    with open(output_file, 'w', encoding='utf-8') as outfile:
+        for filename in sorted(os.listdir(directory)):
+            filepath = os.path.join(directory, filename)
+            if os.path.isfile(filepath):
+                outfile.write(f"=== {filename} ===\n")  # Dateiname als Überschrift
+                with open(filepath, 'r', encoding='utf-8') as infile:
+                    outfile.write(infile.read())
+                outfile.write('\n\n')  # Abstand zwischen Dateien
+
+
 def get_all_links(soup: BeautifulSoup, current_url: str, base_domain: str) -> Set[str]:
     """Extract all internal links from a BeautifulSoup object."""
     links = set()
@@ -19,7 +31,7 @@ def get_all_links(soup: BeautifulSoup, current_url: str, base_domain: str) -> Se
 
 def safe_filename(url: str) -> str:
     """Convert a URL into a safe filename by replacing special characters."""
-    return url.replace("://", "_").replace("/", "_")
+    return url.replace("://", "_").replace("/", "_").replace(":", "_")
 
 def fetch_html(url: str) -> str:
     """
@@ -90,7 +102,7 @@ def scrape_site_recursive(
     Recursively scrape a website starting from the given URL.
     Saves only the HTML for each page.
     """
-    filename = os.path.join(output_dir, f"scraped_{safe_filename(url)}.html")
+    filename = os.path.join(output_dir, f"{safe_filename(url)}.html")
     # Skip if already visited or file exists
     if url in visited or os.path.exists(filename):
         return
@@ -134,3 +146,5 @@ if __name__ == "__main__":
     else:
         start_url = input("Enter the URL of the website to scrape: ").strip()
     main(start_url)
+    # Beispielnutzung
+    merge_files_with_filenames("G:\\uni\\Softwaretechnik-2\\scraped_pages", "zusammengefuegt.txt")

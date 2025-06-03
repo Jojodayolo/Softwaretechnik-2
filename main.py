@@ -120,25 +120,25 @@ content= """
 4. Falls die Antwort zu lang wird, schreibe am Ende “FORTSETZUNG” und fahre beim nächsten Prompt fort.
 
 """
-answer = bot.ask_with_file("repository.txt")
+answer = bot.ask_with_file("zusammengefuegt.txt")
 print(answer)
 
 # Extrahiere den Python-Code (zwischen ```python ... ```)
-py_blocks = re.findall(r"```python(.*?)```", answer, re.DOTALL)
+#py_blocks = re.findall(r"```python(.*?)```", answer, re.DOTALL)
 
-if not py_blocks:
-    # Fallback: Falls kein Markdown-Block, schreibe gesamte Antwort in Datei
-    py_code = answer.strip()
-else:
-    # Nimm alle gefundenen Blöcke (falls mehrere) und füge sie zusammen
-    py_code = "\n\n".join([b.strip() for b in py_blocks])
+#if not py_blocks:
+#    # Fallback: Falls kein Markdown-Block, schreibe gesamte Antwort in Datei
+#    py_code = answer.strip()
+#else:
+#    # Nimm alle gefundenen Blöcke (falls mehrere) und füge sie zusammen
+#    py_code = "\n\n".join([b.strip() for b in py_blocks])
 
 # Speichere als pytest-Datei
-output_file = "test_playwright_assistant.py"
-with open(output_file, "w", encoding="utf-8") as f:
-    f.write(py_code)
+#output_file = "test_playwright_assistant.py"
+#with open(output_file, "w", encoding="utf-8") as f:
+#    f.write(py_code)
 
-print(f"Alle generierten Playwright-Python-Tests wurden in {output_file} gespeichert!")
+#print(f"Alle generierten Playwright-Python-Tests wurden in {output_file} gespeichert!")
 
 #answer = parser.parseResponse(answer)
 #print(answer)
