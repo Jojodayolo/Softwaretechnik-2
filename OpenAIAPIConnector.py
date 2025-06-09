@@ -80,7 +80,7 @@ class OpenAIAPIConnector:
         assistant_id = self._create_assistant(file_id)
 
         prompt = ("""
-        Die hochgeladene Datei enthält eine gescrapte Webanwendung mit verschiedenen Routen, HTML-Komponenten.
+        Die hochgeladene Datei enthält eine gescrapte Webanwendung.
 
         1. Analysiere ALLE enthaltenen Features, die automatisiert getestet werden können (z. B. Formulare, Uploads, Downloads, Authentifizierung, Dropdowns, dynamische Inhalte, Editor, etc.).
         2. Erstelle für JEDES gefundene Feature einen ausführbaren Selenium-Test in PYTHON .
@@ -88,7 +88,8 @@ class OpenAIAPIConnector:
         4. Verwende für jeden Test die passenden Selenium-Selektoren. Schreibe die Imports und, falls nötig, Setup/Teardown mit.
         5. Gib am Ende ausschließlich eine lauffähige Python-Datei mit allen Tests aus. 
         6. Falls notwendig, kommentiere kurz den Zweck jedes Tests im Code.
-        7. Die URLS findest du immer am anfang jedes dateiabschnitts
+        7. am ende der datei findest du die url wie du die datei aufrufen kannst
+        8. stelle sicher dass du die url für die tests verwendest
         8. Baue zwischen den aktionen waits ein, damit die tests erfolgreich durchlaufen
         Antworte bitte NUR mit dem Python-Code für die Testdatei, **keinen Fließtext**.
         """
