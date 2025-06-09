@@ -1,63 +1,71 @@
+import os
+import re
 from OpenAIAPIConnector import OpenAIAPIConnector
 from ResponseParser import ResponseParser
 from FileParser import FileParser, FileReader
 from RepositoryCloner import RepositoryCloner
-import subprocess
-import os
-import re
 
-parser = ResponseParser()
-cloner = RepositoryCloner()
-repo = cloner.clone_repo("https://github.com/saucelabs/the-internet.git")
-cloner.process_repo(repo, "repository.txt")
-print(f"Repository geklont und verarbeitet.")
+def main(reset=True, max_files=5):
+    # Initialisiere OpenAI-Connector
+    bot = OpenAIAPIConnector(model="gpt-4o-mini")
+    
+    if reset:
+        bot.reset_state()
+        print("🔁 Bot-Zustand zurückgesetzt.\n")
+        bot = OpenAIAPIConnector(model="gpt-4o-mini")  # Neu instanziieren nach Reset
 
-# Usage        
-#reader = FileReader("output.txt")
-#try:
-#    content = reader.read()
-#    print("Dateiinhalt:\n", content)
-#except Exception as e:
-#    print(e)
+    # Klone Repository und speichere gesammelten Code
+    cloner = RepositoryCloner()
+    repo_path = cloner.clone_repo("https://github.com/saucelabs/the-internet.git")
+    cloner.process_repo(repo_path, "repository.txt")
+    print("📁 Repository geklont und verarbeitet.\n")
 
-#bot = DeepSeekAPIConnector(model="deepseek-chat")
-#answer = bot.ask("das ist der deepseek-chat test, sag mir ob der geht")
-#print(answer)
+    # Lade HTML-Dateien aus Ordner
+    html_parser = FileParser(folder_path="./scraped_pages")
+    html_files = html_parser.read_all_files()
 
-#bot = DeepSeekAPIConnector(model="deepseek-reasoner")
-#answer = bot.ask("das ist der deepseek-reasoner test, sag mir ob der geht")
+    for i, file_data in enumerate(html_files[:max_files]):
+        html_content = file_data['html']
+        filename = file_data['filename']
+        url = f"/{filename}"  # relative TEST_URL
 
-with open("output.txt", "r", encoding="utf-8") as f:
-    repo_code = f.read()
+        # Speichere HTML-Inhalt und zugehörige URL in Textdatei
+        input_file = f"code{i}.txt"
+        with open(input_file, "w", encoding="utf-8") as f:
+            f.write(html_content + f"\n\nTEST_URL={url}")
 
-bot = OpenAIAPIConnector(model="gpt-4o-mini")
+        print(f"[{i}] Frage OpenAI mit {filename}...")
 
-parser = FileParser(folder_path="./scraped_pages")
-html_files = parser.read_all_files()
-for i, file_data in enumerate(html_files[:3]):  # nur die ersten 3 Dateien
-    # Speichere den HTML-Inhalt + URL in eine Datei
-    with open("code.txt", "w", encoding="utf-8") as file:
-        file.write(file_data['html'] + "\n\nURL available under: " + file_data['filename'])
+        try:
+            response = bot.ask_with_file(input_file)
+        except Exception as e:
+            print(f"❌ Fehler bei Datei {filename}: {e}")
+            continue
 
-    # Frage das Modell mit dieser Datei
-    answer = bot.ask_with_file(
-        "code.txt"
-    )
+        if not response.strip():
+            print(f"⚠️ Keine Antwort erhalten für Datei {filename}.")
+            continue
 
-    print(f"Antwort für Datei {i} ({file_data['filename']}):")
-    print(answer)
+        print(f"✅ Antwort erhalten für Datei {filename}.")
 
-    # Extrahiere Python-Codeblöcke
-    py_blocks = re.findall(r"```python(.*?)```", answer, re.DOTALL)
-    if not py_blocks:
-        py_code = answer.strip()
-    else:
-        py_code = "\n\n".join([b.strip() for b in py_blocks])
+        # Extrahiere Python-Code aus Codeblöcken
+        code_blocks = re.findall(r"```python(.*?)```", response, re.DOTALL)
+        test_code = "\n\n".join(cb.strip() for cb in code_blocks) if code_blocks else response.strip()
 
-    # Speichere Testcode in eine eigene Datei
-    output_file = f"test_playwright_{i}.py"
-    with open(output_file, "w", encoding="utf-8") as f:
-        f.write(py_code)
+        # Speichere generierten Testcode in .py-Datei
+        test_output_file = f"test_playwright_{i}.py"
+        with open(test_output_file, "w", encoding="utf-8") as f:
+            f.write(test_code)
 
-    print(f"Test gespeichert in {output_file}\n")
+        print(f"💾 Test gespeichert in: {test_output_file}\n")
 
+    print("🎯 Verarbeitung abgeschlossen.\n")
+
+    # Optionaler Reset am Ende zur Bereinigung
+    if reset:
+        bot.reset_state()
+        print("🧹 Bot-Zustand am Ende zurückgesetzt.")
+
+
+if __name__ == "__main__":
+    main(reset=True, max_files=5)
