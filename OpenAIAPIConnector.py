@@ -109,6 +109,7 @@ class OpenAIAPIConnector:
             "5. Die Testfunktionen sollen sprechende Namen haben und vollständig ausführbar sein.\n"
             "6. Antworte bitte **nur** mit Python-Code – kein Fließtext.\n"
             "7. Schreibe ganz am Anfang des Codes eine Kommentarzeile mit der verwendeten URL, z. B. `# URL verwendet: https://...`"
+            "8. driver = webdriver.Chrome() so erstellst du den webdriver"
         )
 
         # Prompt an Thread senden
