@@ -4,8 +4,9 @@ from OpenAIAPIConnector import OpenAIAPIConnector
 from ResponseParser import ResponseParser
 from FileParser import FileParser, FileReader
 from RepositoryCloner import RepositoryCloner
+from webscraper import RecursiveWebScraper
 
-def main(reset=True, max_files=5):
+def main(reset=True, max_files=38):
     # Initialisiere OpenAI-Connector
     bot = OpenAIAPIConnector(model="gpt-4o-mini")
     
@@ -15,10 +16,13 @@ def main(reset=True, max_files=5):
         bot = OpenAIAPIConnector(model="gpt-4o-mini")  # Neu instanziieren nach Reset
 
     # Klone Repository und speichere gesammelten Code
-    cloner = RepositoryCloner()
-    repo_path = cloner.clone_repo("https://github.com/saucelabs/the-internet.git")
-    cloner.process_repo(repo_path, "repository.txt")
-    print("📁 Repository geklont und verarbeitet.\n")
+    #cloner = RepositoryCloner()
+    #repo_path = cloner.clone_repo("https://github.com/saucelabs/the-internet.git")
+    #cloner.process_repo(repo_path, "repository.txt")
+    #print("📁 Repository geklont und verarbeitet.\n")
+    scraper = RecursiveWebScraper()
+    #scraper.start_scraping(start_url="")
+
 
     # Lade HTML-Dateien aus Ordner
     html_parser = FileParser(folder_path="./scraped_pages")
@@ -68,4 +72,4 @@ def main(reset=True, max_files=5):
 
 
 if __name__ == "__main__":
-    main(reset=True, max_files=5)
+    main(reset=True, max_files=4)
