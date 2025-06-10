@@ -6,6 +6,9 @@ from FileParser import FileParser, FileReader
 from RepositoryCloner import RepositoryCloner
 from webscraper import RecursiveWebScraper
 
+# .\chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\\temp-chrome"
+
+
 def main(reset=True, max_files=38):
     # Initialisiere OpenAI-Connector
     bot = OpenAIAPIConnector(model="gpt-4o-mini")
