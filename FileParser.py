@@ -38,29 +38,25 @@ class FileParser:
 
         return parsed_files
     
-    def restore_url_string(self, safe_name: str) -> str:
-        """Konvertiert einen safe_filename (z. B. http_localhost_8080_ai.html) zurück zur URL."""
-        name = safe_name.rsplit('.', 1)[0]  # Entfernt Dateiendung wie .html
 
-        # Ersetze Protokoll
+    def restore_url_string(self,safe_name: str) -> str:
+        """Konvertiert einen safe_filename (z. B. http_localhost_8080_ai.html) zurück zur URL."""
+        name = safe_name.rsplit('.', 1)[0]  # Entfernt z. B. '.html'
+
+        # 1. Protokoll wiederherstellen
         if name.startswith("http_"):
             name = name.replace("http_", "http://", 1)
         elif name.startswith("https_"):
             name = name.replace("https_", "https://", 1)
 
-        # localhost_ → localhost:
-        name = name.replace("localhost_", "localhost:", 1)
+        # 2. Hostname mit Port finden – z. B. localhost:8080 oder 127.0.0.1:8000
+        # Ersetze das erste '_' nach Host und Port mit ':'
+        name = re.sub(r'(?<=http://)([^/_]+)_(\d+)', r'\1:\2', name)
+        name = re.sub(r'(?<=https://)([^/_]+)_(\d+)', r'\1:\2', name)
 
-        # Alle weiteren Unterstriche nach dem Port durch / ersetzen
-        match = re.search(r'localhost:\d+', name)
-        if match:
-            end = match.end()
-            prefix = name[:end]
-            rest = name[end:].replace("_", "/")
-            name = prefix + rest
-        else:
-            # Fallback für andere Hosts
-            name = name.replace("_", "/")
+        # 3. Alle weiteren Unterstriche zu Slashes (/) machen
+        # z. B. http://localhost:8080_ai_foo → http://localhost:8080/ai/foo
+        name = name.replace("_", "/")
 
         return name
 
@@ -91,6 +87,3 @@ class FileReader:
 #    print("Dateiinhalt:\n", content)
 #except Exception as e:
 #    print(e)
-
-
-

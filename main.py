@@ -21,7 +21,7 @@ def main(reset=True, max_files=38):
     #cloner.process_repo(repo_path, "repository.txt")
     #print("📁 Repository geklont und verarbeitet.\n")
     scraper = RecursiveWebScraper()
-    #scraper.start_scraping(start_url="")
+    scraper.start_scraping(start_url="http://127.0.0.1:5000")
 
 
     # Lade HTML-Dateien aus Ordner

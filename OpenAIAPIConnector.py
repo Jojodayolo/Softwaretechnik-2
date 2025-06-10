@@ -109,9 +109,8 @@ class OpenAIAPIConnector:
             "5. Die Testfunktionen sollen sprechende Namen haben und vollständig ausführbar sein.\n"
             "6. Antworte bitte **nur** mit Python-Code – kein Fließtext.\n"
             "7. Schreibe ganz am Anfang des Codes eine Kommentarzeile mit der verwendeten URL, z. B. `# URL verwendet: https://...`"
-            "8. driver = webdriver.Chrome() so erstellst du den webdriver"
-            "9. verbinde dich gegen eine bestehende chromedriver session auf dem remote debugging port 9222 und localhost"
-            "10. Füge nach jedem Test eine 5sek Wartezeit ein, damit der Webserver die Anfragen handeln kann"
+            "8. Verbinde dich gegen eine bestehende chromedriver session auf dem remote debugging port 9222 und localhost. Folgendermaßen kannst du dich verbinden: # 1) Finde chromedriver im PATHchromedriver_path = shutil.which(\"chromedriver\")if not chromedriver_path:raise RuntimeError(\" chromedriver wurde nicht gefunden. Bitte \'brew install chromedriver\' o.Ä. ausführen.\")# 2) Konfiguriere ChromeOptions für den Debug-Portoptions = Options()options.add_experimental_option(\"debuggerAddress\", \"127.0.0.1:9222\")# 3) Starte den ChromeDriver-Service (er öffnet keine neue Chrome-Instanz)service = Service(executable_path=chromedriver_path)service.start()# 4) Verbinde Selenium remote mit dem laufenden Debug-Chromedriver = webdriver.Remote(command_executor=service.service_url,options=options)"
+            "9. Füge nach jedem Test eine 5sek Wartezeit ein, damit der Webserver die Anfragen handeln kann"
         )
 
         # Prompt an Thread senden
