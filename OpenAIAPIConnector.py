@@ -110,6 +110,8 @@ class OpenAIAPIConnector:
             "6. Antworte bitte **nur** mit Python-Code – kein Fließtext.\n"
             "7. Schreibe ganz am Anfang des Codes eine Kommentarzeile mit der verwendeten URL, z. B. `# URL verwendet: https://...`"
             "8. driver = webdriver.Chrome() so erstellst du den webdriver"
+            "9. verbinde dich gegen eine bestehende chromedriver session auf dem remote debugging port 9222 und localhost"
+            "10. Füge nach jedem Test eine 5sek Wartezeit ein, damit der Webserver die Anfragen handeln kann"
         )
 
         # Prompt an Thread senden
