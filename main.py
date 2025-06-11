@@ -8,28 +8,26 @@ from webscraper import RecursiveWebScraper
 
 # .\chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\\temp-chrome"
 
+def main(reset=True):
+    # Frage den Benutzer nach der URL, die gescraped werden soll
+    start_url = input("Bitte gib die URL ein, die gescraped werden soll: ").strip()
 
-def main(reset=True, max_files=38):
     # Initialisiere OpenAI-Connector
     bot = OpenAIAPIConnector(model="gpt-4o-mini")
-    
+
     if reset:
         bot.reset_state()
         print("🔁 Bot-Zustand zurückgesetzt.\n")
         bot = OpenAIAPIConnector(model="gpt-4o-mini")  # Neu instanziieren nach Reset
 
-    # Klone Repository und speichere gesammelten Code
-    #cloner = RepositoryCloner()
-    #repo_path = cloner.clone_repo("https://github.com/saucelabs/the-internet.git")
-    #cloner.process_repo(repo_path, "repository.txt")
-    #print("📁 Repository geklont und verarbeitet.\n")
+    # Scrape Website und speichere HTML-Dateien
     scraper = RecursiveWebScraper()
-    scraper.start_scraping(start_url="http://127.0.0.1:5000")
-
+    scraper.start_scraping(start_url=start_url)
 
     # Lade HTML-Dateien aus Ordner
     html_parser = FileParser(folder_path="./scraped_pages")
     html_files = html_parser.read_all_files()
+    max_files = len(html_files)  # Anzahl automatisch auslesen
 
     for i, file_data in enumerate(html_files[:max_files]):
         html_content = file_data['html']
@@ -75,4 +73,4 @@ def main(reset=True, max_files=38):
 
 
 if __name__ == "__main__":
-    main(reset=True, max_files=4)
+    main(reset=True)
