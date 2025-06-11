@@ -9,6 +9,16 @@ from webscraper import RecursiveWebScraper
 # .\chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\\temp-chrome"
 
 def main(reset=True):
+    # TODO
+    # repository name aus konsole lesen für Ordnerstruktur
+    # Ordnerstruktur erstellen: scraped_pages && tests && test results erzeugen
+    # wenn ordnerstruktur -> code so anpassen, dass dateien dementsprechen verarbeitet werden können
+
+    # test_playwright_0 etc einmal drüber iterieren und nicht lauffähige tests löschen
+    # nach erstellen der tests -> pytest ausführen mit entsprechendem log level -> report erzeugen und in die ordner struktur schreiben
+    # nach durchführung der tests -> ordner struktur mit scraped_pages & tests & test report woanders hinkopieren über pfad
+    # nach kopieren der ordnerstruktur ordnerstruktur innerhalb des repos aufräumen für den neuen run
+
     # Frage den Benutzer nach der URL, die gescraped werden soll
     start_url = input("Bitte gib die URL ein, die gescraped werden soll: ").strip()
 
@@ -65,6 +75,9 @@ def main(reset=True):
         print(f"💾 Test gespeichert in: {test_output_file}\n")
 
     print("🎯 Verarbeitung abgeschlossen.\n")
+
+    #TODO
+    #Ausführen der Tests einbauen
 
     # Optionaler Reset am Ende zur Bereinigung
     if reset:
