@@ -1,5 +1,6 @@
 *.txt
 scraped_pages/** 
+run_output/**
 .vscode/
 # Virtuelle Umgebung
 venv/
