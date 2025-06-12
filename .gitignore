@@ -1,8 +1,14 @@
 *.txt
+scraped_pages
 scraped_pages/** 
+run_output
 run_output/**
 .vscode/
+__pycache__
 __pycache__/**
+hackathon-starter
+hackathon-starter/**
 # Virtuelle Umgebung
 venv/
 .env
+

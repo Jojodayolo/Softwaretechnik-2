@@ -21,6 +21,7 @@ run_output/
 ├── tests/ # Contains generated test files (e.g. test_playwright_0.py)
 ├── test_results/ # Stores output and reports from pytest runs
 └── code/ # Intermediate code prompt files used to query OpenAI
+└── images/ #image of each scraped page
 ```
 
 ---

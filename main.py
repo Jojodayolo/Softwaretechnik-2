@@ -12,7 +12,7 @@ import subprocess
 
 def setup_directories(repository_name: str):
     base_path = Path(repository_name)
-    for subfolder in ["scraped_pages", "tests", "test_results", "code"]:
+    for subfolder in ["scraped_pages", "tests", "test_results", "code", "images"]:
         (base_path / subfolder).mkdir(parents=True, exist_ok=True)
     return base_path
 
@@ -81,7 +81,7 @@ def main(reset=True):
 
     # Scrape Website und speichere HTML-Dateien
     scraper = RecursiveWebScraper()
-    scraper.start_scraping(start_url=start_url, locationPath=base_path / "scraped_pages")
+    scraper.start_scraping(start_url=start_url, locationPath=base_path)
 
     # Lade HTML-Dateien aus Ordner
     html_parser = FileParser(folder_path= base_path / "scraped_pages")

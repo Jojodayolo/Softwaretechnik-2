@@ -6,6 +6,8 @@ from typing import Set, List
 import requests
 from bs4 import BeautifulSoup
 
+from GeneratePagePictures import take_screenshots
+
 
 class RecursiveWebScraper:
     def __init__(self, output_dir: str = "scraped_pages", sleep_time: float = 0.5):
@@ -83,7 +85,7 @@ class RecursiveWebScraper:
         return links
 
     def scrape_site_recursive(self, url: str, base_domain: str, visited: Set[str], locationPath: str) -> None:
-        filename = os.path.join(locationPath, f"{self.safe_filename(url)}.html")
+        filename = os.path.join(locationPath / "scraped_pages", f"{self.safe_filename(url)}.html")
         if url in visited or os.path.exists(filename):
             return
         try:
@@ -91,6 +93,7 @@ class RecursiveWebScraper:
             self.save_html(html, filename)
             self.extract_page_info(html, url)
             soup = BeautifulSoup(html, 'html.parser')
+            take_screenshots([url], locationPath / "images")
             links = self.get_all_links(soup, url, base_domain)
             visited.add(url)
             time.sleep(self.sleep_time)
