@@ -1,6 +1,7 @@
 import os
 import re
 import ast
+import difflib
 from OpenAIAPIConnector import OpenAIAPIConnector
 from ResponseParser import ResponseParser
 from FileParser import FileParser, FileReader
@@ -8,6 +9,94 @@ from RepositoryCloner import RepositoryCloner
 from webscraper import RecursiveWebScraper
 from pathlib import Path
 import subprocess
+
+
+
+def normalize_name(filename):
+    """Normalize names for fuzzy matching, ignoring extension and common URL artifacts."""
+    name = os.path.splitext(filename)[0]
+    name = re.sub(r'^(http[s]?_+)?', '', name)  # Remove http_, https_, etc.
+    name = name.replace(":", "_")
+    name = re.sub(r'[^a-zA-Z0-9_]', '_', name)
+    name = re.sub(r'_+', '_', name).strip('_')
+    return name.lower()
+
+def combine_requirements_with_scraped_pages(requirements_dir, scraped_dir, output_dir):
+    os.makedirs(output_dir, exist_ok=True)
+
+    requirement_files = [f for f in os.listdir(requirements_dir) if f.endswith(".txt")]
+    scraped_files = [f for f in os.listdir(scraped_dir) if f.endswith((".txt", ".html"))]
+
+    # Precompute normalized scraped filenames
+    scraped_map = {
+        normalize_name(f): f for f in scraped_files
+    }
+
+    for req_file in requirement_files:
+        req_norm = normalize_name(req_file)
+
+        best_match = difflib.get_close_matches(req_norm, scraped_map.keys(), n=1, cutoff=0.6)
+        if not best_match:
+            print(f"⚠️ Keine passende scraped Datei für {req_file} gefunden.")
+            continue
+
+        matched_scraped_file = scraped_map[best_match[0]]
+
+        req_path = os.path.join(requirements_dir, req_file)
+        scraped_path = os.path.join(scraped_dir, matched_scraped_file)
+        output_path = os.path.join(output_dir, normalize_name(req_file) + "_combined.txt")
+
+        try:
+            with open(scraped_path, "r", encoding="utf-8") as f1, open(req_path, "r", encoding="utf-8") as f2:
+                scraped_content = f1.read().strip()
+                req_content = f2.read().strip()
+
+            combined = (
+                f"##### SCRAPED PAGE: {matched_scraped_file} #####\n\n"
+                f"{scraped_content}\n\n"
+                f"##### TEST REQUIREMENTS: {req_file} #####\n\n"
+                f"{req_content}"
+            )
+
+            with open(output_path, "w", encoding="utf-8") as out_file:
+                out_file.write(combined)
+
+            print(f"✅ Kombiniert gespeichert: {output_path}")
+        except Exception as e:
+            print(f"❌ Fehler beim Kombinieren von {req_file} mit {matched_scraped_file}: {e}")
+
+
+
+def process_image_folder(connector, image_folder: str):
+    if not os.path.isdir(image_folder):
+        raise ValueError(f"Ordner nicht gefunden: {image_folder}")
+
+    # Create output directory beside image folder
+    parent_dir = os.path.dirname(os.path.abspath(image_folder))
+    output_dir = os.path.join(parent_dir, "image_requirements")
+    os.makedirs(output_dir, exist_ok=True)
+
+    image_files = [
+        f for f in os.listdir(image_folder)
+        if f.lower().endswith((".png", ".jpg", ".jpeg", ".webp"))
+    ]
+
+    if not image_files:
+        print("⚠️ Keine Bilddateien im Ordner gefunden.")
+        return
+
+    for image_file in image_files:
+        image_path = os.path.join(image_folder, image_file)
+        print(f"🔍 Verarbeite Bild: {image_file}")
+
+        try:
+            requirements = connector.generate_requirements_from_image(image_path)
+            output_path = os.path.join(output_dir, os.path.splitext(image_file)[0] + ".txt")
+            with open(output_path, "w", encoding="utf-8") as out_file:
+                out_file.write(requirements)
+            print(f"✅ Gespeichert: {output_path}")
+        except Exception as e:
+            print(f"❌ Fehler bei {image_file}: {e}")
 
 
 def setup_directories(repository_name: str):
@@ -52,19 +141,6 @@ def is_test_runnable(filepath):
 # .\chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\\temp-chrome"
 
 def main(reset=True):
-    # TODO
-    # repository name aus konsole lesen für Ordnerstruktur
-
-    # Ordnerstruktur erstellen: scraped_pages && tests && test results erzeugen (Funktion setup_directories added but not integrated)
-
-
-    # wenn ordnerstruktur -> code so anpassen, dass dateien dementsprechen verarbeitet werden können ( )
-
-    # test_playwright_0 etc einmal drüber iterieren und nicht lauffähige tests löschen
-    # nach erstellen der tests -> pytest ausführen mit entsprechendem log level -> report erzeugen und in die ordner struktur schreiben
-    # nach durchführung der tests -> ordner struktur mit scraped_pages & tests & test report woanders hinkopieren über pfad
-    # nach kopieren der ordnerstruktur ordnerstruktur innerhalb des repos aufräumen für den neuen run
-
     # Frage den Benutzer nach der URL, die gescraped werden soll
     start_url = input("Bitte gib die URL ein, die gescraped werden soll: ").strip()
 
@@ -83,6 +159,14 @@ def main(reset=True):
     scraper = RecursiveWebScraper()
     scraper.start_scraping(start_url=start_url, locationPath=base_path)
 
+    #Get Requirements from image
+    #process_image_folder(bot, base_path / "images")
+    # Kombiniere Requirements mit gescrapten Seiten
+    combine_requirements_with_scraped_pages(
+        requirements_dir=base_path / "image_requirements",
+        scraped_dir=base_path / "scraped_pages",
+        output_dir=base_path / "combined_requirements"
+    )
     # Lade HTML-Dateien aus Ordner
     html_parser = FileParser(folder_path= base_path / "scraped_pages")
     html_files = html_parser.read_all_files()

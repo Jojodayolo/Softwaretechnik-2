@@ -167,3 +167,61 @@ class OpenAIAPIConnector:
             if os.path.exists(file):
                 os.remove(file)
                 print(f"🗑️ {file} gelöscht.")
+
+
+
+    def generate_requirements_from_image(self, image_path: str) -> str:
+            """Send an image file (e.g. UI screenshot) to the assistant and get textual test requirements."""
+            # Upload image
+            file_id = self.upload_file_for_assistant(image_path)
+
+            # Create thread
+            thread = self.client.beta.threads.create()
+            thread_id = thread.id
+
+            # No need to update tools since this doesn't use code interpreter (just a simple prompt)
+            prompt = (
+                "Dies ist ein Screenshot einer Webanwendung.\n\n"
+                "Analysiere das Bild und formuliere verständliche, strukturierte Testanforderungen für die gezeigte Benutzeroberfläche. "
+                "Fokus: Testbare Funktionen, erwartetes Verhalten, relevante UI-Elemente. "
+                "Antwort bitte in nummerierten Listenpunkten. Kein Python-Code – nur natürlichsprachliche Anforderungen."
+            )
+
+            self.client.beta.threads.messages.create(
+                thread_id=thread_id,
+                role="user",
+                content=[
+                    {
+                        "type": "text",
+                        "text": prompt
+                    },
+                    {
+                        "type": "image_file",
+                        "image_file": {
+                            "file_id": file_id
+                        }
+                    }
+                ]
+            )
+
+            run = self.client.beta.threads.runs.create(
+                thread_id=thread_id,
+                assistant_id=self.assistant_id
+            )
+
+            print("Warte auf Testanforderungen aus dem Bild...")
+
+            while True:
+                run_status = self.client.beta.threads.runs.retrieve(
+                    thread_id=thread_id,
+                    run_id=run.id
+                )
+                if run_status.status == "completed":
+                    break
+                elif run_status.status in ["failed", "cancelled", "expired"]:
+                    raise Exception(f"Run fehlgeschlagen: {run_status.status}")
+                time.sleep(2)
+
+            answer = self._extract_assistant_response(thread_id)
+            print("✅ Anforderungen empfangen.")
+            return answer.strip()
