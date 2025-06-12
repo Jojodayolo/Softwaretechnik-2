@@ -2,6 +2,7 @@
 scraped_pages/** 
 run_output/**
 .vscode/
+__pycache__/**
 # Virtuelle Umgebung
 venv/
 .env

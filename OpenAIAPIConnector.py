@@ -105,12 +105,13 @@ class OpenAIAPIConnector:
             "1. Analysiere ausschließlich die **aktuell angehängte Datei**.\n"
             "2. Ignoriere alle vorherigen Prompts, Kontexte oder Dateien.\n"
             "3. Verwende **ausschließlich** die `TEST_URL`, die ganz unten in dieser Datei im Format `TEST_URL=...` angegeben ist.\n"
-            "4. Erstelle für **jedes erkannte Feature** ausführbare Selenium-Tests in Python im pytest-Format (`test_*.py`).\n"
+            "4. Erstelle für **jedes erkannte Feature** ausführbare Playwright-Tests in Python im pytest-Format (`test_*.py`).\n"
             "5. Die Testfunktionen sollen sprechende Namen haben und vollständig ausführbar sein.\n"
             "6. Antworte bitte **nur** mit Python-Code – kein Fließtext.\n"
             "7. Schreibe ganz am Anfang des Codes eine Kommentarzeile mit der verwendeten URL, z. B. `# URL verwendet: https://...`"
-            "8. Verbinde dich gegen eine bestehende chromedriver session wie folgt options = webdriver.ChromeOptions() options.add_experimental_option(\"debuggerAddress\", \"localhost:9222\")driver = webdriver.Chrome(options=options)"
+            "8. Messe die Coverage mithilfe von playwright und generiere am ende einen coverage report\n"
             "9. Füge nach jedem Test eine 5sek Wartezeit ein, damit der Webserver die Anfragen handeln kann"
+            "10. Nutze einen ganz normalen Chromedriver "
         )
 
         # Prompt an Thread senden
