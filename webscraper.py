@@ -82,8 +82,8 @@ class RecursiveWebScraper:
                 links.add(full_url)
         return links
 
-    def scrape_site_recursive(self, url: str, base_domain: str, visited: Set[str]) -> None:
-        filename = os.path.join(self.output_dir, f"{self.safe_filename(url)}.html")
+    def scrape_site_recursive(self, url: str, base_domain: str, visited: Set[str], locationPath: str) -> None:
+        filename = os.path.join(locationPath, f"{self.safe_filename(url)}.html")
         if url in visited or os.path.exists(filename):
             return
         try:
@@ -95,7 +95,7 @@ class RecursiveWebScraper:
             visited.add(url)
             time.sleep(self.sleep_time)
             for link in links:
-                self.scrape_site_recursive(link, base_domain, visited)
+                self.scrape_site_recursive(link, base_domain, visited, locationPath=locationPath)
         except Exception as e:
             print(f"Failed to fetch {url}: {e}")
 
@@ -130,9 +130,9 @@ class RecursiveWebScraper:
             print("\nErsetzter Inhalt:\n")
             print(content)
 
-    def start_scraping(self, start_url: str):
+    def start_scraping(self, start_url: str, locationPath: str = ""):
         base_domain = urlparse(start_url).netloc
         visited = set()
-        self.scrape_site_recursive(start_url, base_domain, visited)
+        self.scrape_site_recursive(start_url, base_domain, visited,locationPath= locationPath)
         scraped_files = self.list_scraped_files()
         print(f"Scraped {len(scraped_files)} pages. Files are in '{self.output_dir}/'.")
