@@ -9,6 +9,7 @@ from RepositoryCloner import RepositoryCloner
 from webscraper import RecursiveWebScraper
 from pathlib import Path
 import subprocess
+import shutil  
 
 
 
@@ -160,7 +161,7 @@ def main(reset=True):
     scraper.start_scraping(start_url=start_url, locationPath=base_path)
 
     #Get Requirements from image
-    #process_image_folder(bot, base_path / "images")
+    process_image_folder(bot, base_path / "images")
     # Kombiniere Requirements mit gescrapten Seiten
     combine_requirements_with_scraped_pages(
         requirements_dir=base_path / "image_requirements",
@@ -209,14 +210,38 @@ def main(reset=True):
 
     print("🎯 Verarbeitung abgeschlossen.\n")
 
-    #TODO
-    #Ausführen der Tests einbauen
+    # 🧪 Testdateien ausführen (ohne Coverage), Output speichern
+    test_dir = base_path / "tests"
+    test_files = [test_dir / f for f in os.listdir(test_dir) if f.endswith(".py")]
+
+    runnable_tests = [str(f) for f in test_files if is_test_runnable(f)]
+
+    if not runnable_tests:
+        print("⚠️ Keine lauffähigen Testdateien gefunden.")
+    else:
+        print(f"🚀 Führe {len(runnable_tests)} Testdateien mit pytest aus...")
+
+        output_log_path = base_path / "test_results" / "pytest_output.log"
+        with open(output_log_path, "w", encoding="utf-8") as log_file:
+            result = subprocess.run(
+                ["pytest"] + runnable_tests,
+                cwd=base_path,
+                stdout=log_file,
+                stderr=subprocess.STDOUT,
+                text=True
+            )
+
+        if result.returncode == 0:
+            print(f"✅ Alle Tests erfolgreich. Output gespeichert unter: {output_log_path}")
+        else:
+            print(f"❌ Einige Tests sind fehlgeschlagen. Siehe Log: {output_log_path}")
 
     # Optionaler Reset am Ende zur Bereinigung
     if reset:
         bot.reset_state()
         print("🧹 Bot-Zustand am Ende zurückgesetzt.")
-
+    #shutil.rmtree(base_path)
+    #print("🗑️ Ordner 'run_output' wurde gelöscht.")
 
 if __name__ == "__main__":
     main(reset=True)
