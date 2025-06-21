@@ -12,7 +12,7 @@ def take_screenshots(urls, output_dir):
             try:
                 page.goto(url, timeout=15000)
                 # Clean the filename to avoid invalid characters
-                filename = url.replace("http://", "").replace("https://", "").replace("/", "_") + ".png"
+                filename = url.replace("http://", "").replace("https://", "").replace("/", "_").replace(":","_") + ".png"
                 path = os.path.join(output_dir, filename)
                 page.screenshot(path=path, full_page=True)
                 print(f"✅ Saved screenshot: {path}")

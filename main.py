@@ -22,6 +22,27 @@ def normalize_name(filename):
     name = re.sub(r'_+', '_', name).strip('_')
     return name.lower()
 
+def restore_url_string(safe_name: str) -> str:
+    """Konvertiert einen safe_filename (z. B. http_localhost_8080_ai.html) zurück zur URL."""
+    name = safe_name.rsplit('.', 1)[0]  # Entfernt z. B. '.html'
+
+    # 1. Protokoll wiederherstellen
+    if name.startswith("http_"):
+        name = name.replace("http_", "http://", 1)
+    elif name.startswith("https_"):
+        name = name.replace("https_", "https://", 1)
+
+    # 2. Hostname mit Port finden – z. B. localhost:8080 oder 127.0.0.1:8000
+    # Ersetze das erste '_' nach Host und Port mit ':'
+    name = re.sub(r'(?<=http://)([^/_]+)_(\d+)', r'\1:\2', name)
+    name = re.sub(r'(?<=https://)([^/_]+)_(\d+)', r'\1:\2', name)
+
+    # 3. Alle weiteren Unterstriche zu Slashes (/) machen
+    # z. B. http://localhost:8080_ai_foo → http://localhost:8080/ai/foo
+    name = name.replace("_", "/")
+
+    return name
+
 def combine_requirements_with_scraped_pages(requirements_dir, scraped_dir, output_dir):
     os.makedirs(output_dir, exist_ok=True)
 
@@ -35,7 +56,7 @@ def combine_requirements_with_scraped_pages(requirements_dir, scraped_dir, outpu
 
     for req_file in requirement_files:
         req_norm = normalize_name(req_file)
-
+        test_url = restore_url_string(req_file)
         best_match = difflib.get_close_matches(req_norm, scraped_map.keys(), n=1, cutoff=0.6)
         if not best_match:
             print(f"⚠️ Keine passende scraped Datei für {req_file} gefunden.")
@@ -53,10 +74,12 @@ def combine_requirements_with_scraped_pages(requirements_dir, scraped_dir, outpu
                 req_content = f2.read().strip()
 
             combined = (
-                f"##### SCRAPED PAGE: {matched_scraped_file} #####\n\n"
+                f"##### SCRAPED PAGE #####\n\n"
                 f"{scraped_content}\n\n"
-                f"##### TEST REQUIREMENTS: {req_file} #####\n\n"
+                f"##### TEST REQUIREMENTS #####\n\n"
                 f"{req_content}"
+                f"### TEST URL ###"
+                f"{test_url}"
             )
 
             with open(output_path, "w", encoding="utf-8") as out_file:
@@ -168,34 +191,25 @@ def main(reset=True):
         scraped_dir=base_path / "scraped_pages",
         output_dir=base_path / "combined_requirements"
     )
-    # Lade HTML-Dateien aus Ordner
-    html_parser = FileParser(folder_path= base_path / "scraped_pages")
-    html_files = html_parser.read_all_files()
-    max_files = len(html_files)  # Anzahl automatisch auslesen
+    # Lade Requirements Dateien aus Ordner
+    requirement_files = [f for f in os.listdir(base_path / "combined_requirements") if f.endswith(".txt")]
+    max_files = len(requirement_files)  # Anzahl automatisch auslesen
 
-    for i, file_data in enumerate(html_files[:max_files]):
-        html_content = file_data['html']
-        filename = file_data['filename']
-        url = f"/{filename}"  # relative TEST_URL
+    for file_data in requirement_files:
 
-        # Speichere HTML-Inhalt und zugehörige URL in Textdatei
-        input_file = base_path / "code" / f"code{i}.txt"
-        with open(input_file, "w", encoding="utf-8") as f:
-            f.write(html_content + f"\n\nTEST_URL={url}")
-
-        print(f"[{i}] Frage OpenAI mit {filename}...")
+        print(f" Frage OpenAI mit {file_data}...")
 
         try:
-            response = bot.ask_with_file(input_file)
+            response = bot.ask_with_file(file_data)
         except Exception as e:
-            print(f"❌ Fehler bei Datei {filename}: {e}")
+            print(f"❌ Fehler bei Datei {file_data}: {e}")
             continue
 
         if not response.strip():
-            print(f"⚠️ Keine Antwort erhalten für Datei {filename}.")
+            print(f"⚠️ Keine Antwort erhalten für Datei {file_data}.")
             continue
 
-        print(f"✅ Antwort erhalten für Datei {filename}.")
+        print(f"✅ Antwort erhalten für Datei {file_data}.")
 
         # Extrahiere Python-Code aus Codeblöcken
         code_blocks = re.findall(r"```python(.*?)```", response, re.DOTALL)
