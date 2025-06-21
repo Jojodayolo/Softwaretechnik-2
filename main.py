@@ -80,6 +80,8 @@ def combine_requirements_with_scraped_pages(requirements_dir, scraped_dir, outpu
                 f"{req_content}"
                 f"### TEST URL ###"
                 f"{test_url}"
+                f"### Use the following test as a template"
+                
             )
 
             with open(output_path, "w", encoding="utf-8") as out_file:
