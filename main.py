@@ -31,23 +31,29 @@ def restore_url_string(safe_name: str) -> str:
         name = name.replace("http_", "http://", 1)
     elif name.startswith("https_"):
         name = name.replace("https_", "https://", 1)
+    else:
+        name = "http://" + name  # Fallback
 
-    # 2. Hostname mit Port finden – z. B. localhost:8080 oder 127.0.0.1:8000
-    # Ersetze das erste '_' nach Host und Port mit ':'
-    name = re.sub(r'(?<=http://)([^/_]+)_(\d+)', r'\1:\2', name)
-    name = re.sub(r'(?<=https://)([^/_]+)_(\d+)', r'\1:\2', name)
+    # 2. Host:Port extrahieren
+    match = re.match(r"(https?://[^/_]+)_(\d+)(.*)", name)
+    if match:
+        base = f"{match.group(1)}:{match.group(2)}"
+        rest = match.group(3).replace("_", "/")
+        return base + rest
 
-    # 3. Alle weiteren Unterstriche zu Slashes (/) machen
-    # z. B. http://localhost:8080_ai_foo → http://localhost:8080/ai/foo
-    name = name.replace("_", "/")
-
-    return name
+    # 3. Falls kein Port vorhanden: Ersetze ab dem Host alle _ durch /
+    prefix, _, path = name.partition("://")
+    parts = path.split("_")
+    return f"{prefix}://{'/'.join(parts)}"
 
 def combine_requirements_with_scraped_pages(requirements_dir, scraped_dir, output_dir):
     os.makedirs(output_dir, exist_ok=True)
 
     requirement_files = [f for f in os.listdir(requirements_dir) if f.endswith(".txt")]
     scraped_files = [f for f in os.listdir(scraped_dir) if f.endswith((".txt", ".html"))]
+
+    exampleTest = open(f"exampleTest.txt", "r", encoding="utf-8")
+
 
     # Precompute normalized scraped filenames
     scraped_map = {
@@ -69,18 +75,20 @@ def combine_requirements_with_scraped_pages(requirements_dir, scraped_dir, outpu
         output_path = os.path.join(output_dir, normalize_name(req_file) + "_combined.txt")
 
         try:
-            with open(scraped_path, "r", encoding="utf-8") as f1, open(req_path, "r", encoding="utf-8") as f2:
+            with open(scraped_path, "r", encoding="utf-8") as f1, open(req_path, "r", encoding="utf-8") as f2, open("exampleTest.txt", "r", encoding="utf-8") as file:
                 scraped_content = f1.read().strip()
                 req_content = f2.read().strip()
+                content = file.read()
 
             combined = (
                 f"##### SCRAPED PAGE #####\n\n"
                 f"{scraped_content}\n\n"
-                f"##### TEST REQUIREMENTS #####\n\n"
+                f"\n##### TEST REQUIREMENTS #####\n\n"
                 f"{req_content}"
-                f"### TEST URL ###"
+                f"\n### TEST URL ###\n\n"
                 f"{test_url}"
-                f"### Use the following test as a template"
+                f"\n### Use the following test as a template\n\n"
+                f"{content}\n"
                 
             )
 
@@ -113,16 +121,22 @@ def process_image_folder(connector, image_folder: str):
 
     for image_file in image_files:
         image_path = os.path.join(image_folder, image_file)
+        output_path = os.path.join(output_dir, os.path.splitext(image_file)[0] + ".txt")
+
+        if os.path.exists(output_path):
+            print(f"⏩ Überspringe {image_file} – Ausgabedatei existiert bereits.")
+            continue
+
         print(f"🔍 Verarbeite Bild: {image_file}")
 
         try:
             requirements = connector.generate_requirements_from_image(image_path)
-            output_path = os.path.join(output_dir, os.path.splitext(image_file)[0] + ".txt")
             with open(output_path, "w", encoding="utf-8") as out_file:
                 out_file.write(requirements)
             print(f"✅ Gespeichert: {output_path}")
         except Exception as e:
             print(f"❌ Fehler bei {image_file}: {e}")
+
 
 
 def setup_directories(repository_name: str):
@@ -197,12 +211,12 @@ def main(reset=True):
     requirement_files = [f for f in os.listdir(base_path / "combined_requirements") if f.endswith(".txt")]
     max_files = len(requirement_files)  # Anzahl automatisch auslesen
 
-    for file_data in requirement_files:
+    for i, file_data in enumerate(requirement_files):
 
         print(f" Frage OpenAI mit {file_data}...")
 
         try:
-            response = bot.ask_with_file(file_data)
+            response = bot.ask_with_file(base_path / "combined_requirements" / file_data)
         except Exception as e:
             print(f"❌ Fehler bei Datei {file_data}: {e}")
             continue

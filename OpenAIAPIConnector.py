@@ -101,17 +101,15 @@ class OpenAIAPIConnector:
         )
 
         prompt = (
-            "Die hochgeladene Datei enthält eine gescrapte Webanwendung.\n\n"
-            "1. Analysiere ausschließlich die **aktuell angehängte Datei**.\n"
-            "2. Ignoriere alle vorherigen Prompts, Kontexte oder Dateien.\n"
-            "3. Verwende **ausschließlich** die `TEST_URL`, die ganz unten in dieser Datei im Format `TEST_URL=...` angegeben ist.\n"
-            "4. Erstelle für **jedes erkannte Feature** ausführbare Playwright-Tests in Python im pytest-Format (`test_*.py`).\n"
-            "5. Die Testfunktionen sollen sprechende Namen haben und vollständig ausführbar sein.\n"
-            "6. Antworte bitte **nur** mit Python-Code – kein Fließtext.\n"
-            "7. Schreibe ganz am Anfang des Codes eine Kommentarzeile mit der verwendeten URL, z. B. `# URL verwendet: https://...`"
-            "8. Messe die Coverage mithilfe von playwright und generiere am ende einen coverage report\n"
-            "9. Füge nach jedem Test eine 5sek Wartezeit ein, damit der Webserver die Anfragen handeln kann"
-            "10. Nutze einen ganz normalen Chromedriver "
+            "The uploaded file contains a scraped web application, test requirements, test URL and an example test.\n\n"
+            "1. Analyze only the currently attached file.\n"
+            "2. Ignore all previous prompts, contexts, or files.\n"
+            "3. Use only the TEST_URL specified in the file.\n"
+            "4. For each test requirement write an executable test and use the test example as the template.\n"
+            "5. Test functions must have descriptive names and be fully executable.\n"
+            "6. Respond only with Python code – no explanatory text.\n"
+            "7. At the very top of the code, include a comment line with the used URL, e.g., # URL used: https://...\n"
+            "8. Add a 5-second wait after each test to allow the web server to handle requests.\n"
         )
 
         # Prompt an Thread senden
