@@ -232,7 +232,7 @@ def main(reset=True):
         test_code = "\n\n".join(cb.strip() for cb in code_blocks) if code_blocks else response.strip()
 
         # Speichere generierten Testcode in .py-Datei
-        test_output_file = base_path / "tests" / f"test_playwright_{i}.py"
+        test_output_file = base_path / "tests" / Path(file_data).with_suffix(".py")
         with open(test_output_file, "w", encoding="utf-8") as f:
             f.write(test_code)
 
