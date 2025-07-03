@@ -110,6 +110,7 @@ class OpenAIAPIConnector:
             "6. Respond only with Python code – no explanatory text.\n"
             "7. At the very top of the code, include a comment line with the used URL, e.g., # URL used: https://...\n"
             "8. Add a 5-second wait after each test to allow the web server to handle requests.\n"
+            "9. Make sure every test class name starts with Test that it can be processed from pytest \n"
         )
 
         # Prompt an Thread senden
@@ -179,10 +180,16 @@ class OpenAIAPIConnector:
 
             # No need to update tools since this doesn't use code interpreter (just a simple prompt)
             prompt = (
-                "Dies ist ein Screenshot einer Webanwendung.\n\n"
-                "Analysiere das Bild und formuliere verständliche, strukturierte Testanforderungen für die gezeigte Benutzeroberfläche. "
-                "Fokus: Testbare Funktionen, erwartetes Verhalten, relevante UI-Elemente. "
-                "Antwort bitte in nummerierten Listenpunkten. Kein Python-Code – nur natürlichsprachliche Anforderungen."
+                "This is a screenshot of a web application interface.\n\n"
+                "Analyze the image carefully and generate clear, structured test requirements based on the visible UI. "
+                "Focus specifically on:\n"
+                "1. Testable user interactions (e.g., buttons, inputs, navigation elements)\n"
+                "2. Expected behavior for each element or user action\n"
+                "3. UI components relevant for functional or usability testing\n\n"
+                "Format your response as a numbered list of concise, natural-language test requirements.\n"
+                "- Do NOT write any code\n"
+                "- Avoid vague statements; be specific and practical\n"
+                "- Use clear wording suitable for QA or test case design\n"
             )
 
             self.client.beta.threads.messages.create(
