@@ -1,4 +1,3 @@
-# conftest.py
 import pytest_asyncio
 from PlaywrightCoverageManager import PlaywrightCoverageManager  # ggf. anpassen
 
