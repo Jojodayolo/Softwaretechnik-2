@@ -1,20 +1,23 @@
 # 🧪 AI-Powered Web Test Generator
 
-This project automates the process of scraping web pages, generating Playwright test cases using OpenAI's GPT-4o model, and running those tests using `pytest`. It is designed to streamline the testing pipeline for dynamic websites with minimal human intervention.
+This project automates the process of scraping web pages, generating Playwright test cases using OpenAI's GPT-4o model and others, and running those tests with `pytest`. It is designed to streamline the testing pipeline for dynamic websites with minimal human intervention.
 
 ---
 
 ## 🚀 Features
 
-- Recursively scrape HTML pages from a given URL
-- Automatically generate test code using OpenAI
-- Syntax and test validity checks before execution
-- Run tests using `pytest` and store structured results
-- Fully modular architecture with reset/cleanup logic
+- **Recursive Web Scraping:** Automatically downloads all HTML pages from a given website.
+- **AI Test Generation:** Uses OpenAI GPT-4o to generate Playwright-based Python test cases from requirements and scraped content.
+- **Image-to-Requirement Extraction:** Extracts requirements from screenshots or images using AI.
+- **Test Validation:** Checks syntax and test validity before running.
+- **Automated Test Execution:** Runs generated tests with `pytest` and stores results.
+- **Modular & Extensible:** Clean, class-based architecture for easy extension and maintenance.
+- **Reset & Cleanup Logic:** Optional state reset and output cleanup for reproducible runs.
 
 ---
 
 ## 📂 Folder Structure
+
 ```
 run_output/
 ├── scraped_pages/ # Contains HTML files scraped from the website
@@ -26,14 +29,12 @@ run_output/
 
 ---
 
-## 🛠️ To-Do List (Planned Improvements)
+## 🛠️ Planned Improvements
 
-- [ ] **Command-line input**: Prompt user for repository or folder name to dynamically set up the `run_output/` path.
-- [ ] **Test filtering**: Remove non-runnable test files (e.g., syntax errors, not collected by pytest).
-- [ ] **Test execution**: Automatically execute tests with `pytest`, capture logs, and store results in `test_results/`.
-- [ ] **Report Generation**: Create a readable summary (e.g. HTML or Markdown) of test outcomes.
-- [ ] **Folder relocation**: Move the `run_output` folder to a new target directory after processing.
-- [ ] **Reset behavior**: Clean up all generated files at the end of each run to allow for fresh runs.
+- [ ] **Report Generation:** Create a readable summary (HTML/Markdown) of test outcomes.
+- [ ] **Folder Relocation:** Move the `run_output` folder to a new target directory after processing.
+- [ ] **Better Error Handling:** More robust error and retry logic for scraping and AI calls.
+- [ ] **Parallel Test Execution:** Speed up test runs for large sites.
 
 ---
 
@@ -44,15 +45,46 @@ run_output/
 - `playwright`
 - `openai`
 - Google Chrome (for headless scraping/debugging)
-- Chrome must be run with:
-.\chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\temp-chrome"
 
-Install dependencies:
+**Chrome must be run with:**
+```sh
+chrome.exe --remote-debugging-port=9222 --user-data-dir="C:\temp-chrome"
+```
 
-```bash
+**Install dependencies:**
+```sh
 pip install -r requirements.txt
 ```
-🧪 How to Use
-```bash
-python main.py
-```
+
+---
+
+## 🧪 How to Use
+
+1. **Start Chrome in remote debugging mode** (see above).
+2. **Run the main script:**
+    ```sh
+    python main.py
+    ```
+3. **Follow the prompts** to enter the URL to be scraped.
+4. **Generated tests and results** will appear in the `run_output/` folder.
+
+---
+
+## 🤖 Architecture Overview
+
+- **TestUtils:** Utilities for test validation and filename normalization.
+- **RequirementCombiner:** Combines requirements and scraped HTML for AI prompts.
+- **ImageRequirementProcessor:** Extracts requirements from images/screenshots.
+- **DirectorySetup:** Handles output folder creation.
+- **RecursiveWebScraper:** Handles recursive scraping of the target website.
+- **OpenAIAPIConnector:** Handles communication with the OpenAI API.
+
+---
+
+## 📣 Contributing
+
+Contributions, issues, and feature requests are welcome! Please open an issue or submit a pull request.
+
+---
+
+
