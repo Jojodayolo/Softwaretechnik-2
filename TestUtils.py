@@ -85,8 +85,6 @@ class RequirementCombiner:
         requirement_files = [f for f in os.listdir(requirements_dir) if f.endswith(".txt")]
         scraped_files = [f for f in os.listdir(scraped_dir) if f.endswith((".txt", ".html"))]
 
-        exampleTest = open(f"exampleTest.txt", "r", encoding="utf-8")
-
         # Precompute normalized scraped filenames
         scraped_map = {
             TestUtils.normalize_name(f): f for f in scraped_files
@@ -105,7 +103,6 @@ class RequirementCombiner:
             req_path = os.path.join(requirements_dir, req_file)
             scraped_path = os.path.join(scraped_dir, matched_scraped_file)
             output_path = os.path.join(output_dir, TestUtils.normalize_name(req_file) + "_combined.txt")
-
             try:
                 with open(scraped_path, "r", encoding="utf-8") as f1, open(req_path, "r", encoding="utf-8") as f2, open("exampleTest.txt", "r", encoding="utf-8") as file:
                     scraped_content = f1.read().strip()
