@@ -27,8 +27,9 @@ class OpenAIAPIConnector:
         assistant = self.client.beta.assistants.create(
             name="Test Generator Assistant",
             description=(
-                "Analysiere eine einzelne Datei. Identifiziere testbare Features. "
-                "Generiere pytest-kompatiblen Selenium-Code. Verwende NUR die TEST_URL aus der Datei."
+                "You are an experienced developer. Analyze the provided file, which includes a scraped website, "
+                "manual test cases, the TEST_URL, and an example test. From this, identify testable features and "
+                "generate Playwright tests compatible with pytest. Use only the TEST_URL given in the file."
             ),
             model=self.model,
             tools=[{"type": "code_interpreter"}]
