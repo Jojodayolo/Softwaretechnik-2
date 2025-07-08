@@ -2,6 +2,7 @@ import pytest_asyncio
 import os
 from PlaywrightCoverageManager import PlaywrightCoverageManager  # ggf. anpassen
 
+#pytest --html=report.html
 
 @pytest_asyncio.fixture(scope="function")
 async def coverage_manager():
