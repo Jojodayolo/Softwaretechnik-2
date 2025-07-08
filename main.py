@@ -3,7 +3,13 @@ import re
 from OpenAIAPIConnector import OpenAIAPIConnector
 from webscraper import RecursiveWebScraper
 from pathlib import Path
-from TestUtils import setup_directories, process_image_folder, combine_requirements_with_scraped_pages, run_pytest_on_generated_tests
+
+# main.py
+from TestUtils import (
+    DirectorySetup,
+    ImageRequirementProcessor,
+    RequirementCombiner,
+)
 
 
 
@@ -12,13 +18,6 @@ from TestUtils import setup_directories, process_image_folder, combine_requireme
 def main(reset=True, runTest=False):
     # Ask the user for the URL to be scraped
     start_url = input("Please enter the URL to be scraped: ").strip()
-    _file_url = "run_output/last_url.txt"
-    if os.path.exists(_file_url):
-        os.remove(_file_url)
-    with open(_file_url, "w", encoding="utf-8") as f:
-        f.write(start_url)
-    with open(_file_url, "r", encoding="utf-8") as f:
-        start_url = f.read().strip()
 
     # Initialize OpenAI connector
     bot = OpenAIAPIConnector(model="gpt-4o-mini")
@@ -29,16 +28,24 @@ def main(reset=True, runTest=False):
         bot = OpenAIAPIConnector(model="gpt-4o-mini")  # Re-instantiate after reset
 
     # Create repository folder
-    base_path = setup_directories("run_output")
+    base_path = DirectorySetup.setup("run_output")
+    
+    _file_url = "run_output/last_url.txt"
+    if os.path.exists(_file_url):
+        os.remove(_file_url)
+    with open(_file_url, "w", encoding="utf-8") as f:
+        f.write(start_url)
+    with open(_file_url, "r", encoding="utf-8") as f:
+        start_url = f.read().strip()
 
     # Scrape website and save HTML files
     scraper = RecursiveWebScraper()
     scraper.start_scraping(start_url=start_url, locationPath=base_path)
 
     # Get requirements from image
-    process_image_folder(bot, base_path / "images")
+    ImageRequirementProcessor.process(bot, base_path / "images")
     # Combine requirements with scraped pages
-    combine_requirements_with_scraped_pages(
+    RequirementCombiner.combine(
         requirements_dir=base_path / "image_requirements",
         scraped_dir=base_path / "scraped_pages",
         output_dir=base_path / "combined_requirements"
@@ -77,8 +84,8 @@ def main(reset=True, runTest=False):
     print("🎯 Processing completed.\n")
 
     # Only run tests if runTest=True was passed
-    if runTest:
-        run_pytest_on_generated_tests(base_path)
+    #if runTest:
+    #    run_pytest_on_generated_tests(base_path)
 
     # Optional reset at the end for cleanup
     if reset:
