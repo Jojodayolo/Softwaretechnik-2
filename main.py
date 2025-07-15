@@ -12,7 +12,7 @@ from TestUtils import (
     RequirementCombiner,
 )
 
-def main(reset=True):
+def main():
 
     # Ask user to choose the backend
     while True:
@@ -30,8 +30,8 @@ def main(reset=True):
     else:
         bot = DeepSeekAPIConnector(model="deepseek-chat")
 
-    # Reset only if OpenAI is used and reset flag is True
-    if reset and isinstance(bot, OpenAIAPIConnector):
+    # Reset only if OpenAI is used 
+    if isinstance(bot, OpenAIAPIConnector):
         bot.reset_state()
         print("🔁 OpenAI bot state reset.\n")
         bot = OpenAIAPIConnector(model="gpt-4o-mini")  # Re-instantiate after reset
@@ -101,14 +101,14 @@ def main(reset=True):
     #if runTest:
     #    run_pytest_on_generated_tests(base_path)
 
-    # Optional reset at the end for cleanup
-    if reset and isinstance(bot, OpenAIAPIConnector):
+    # reset at the end for cleanup
+    if isinstance(bot, OpenAIAPIConnector):
         bot.reset_state()
         print("🧹 Bot state reset at the end.")
     #shutil.rmtree(base_path)
     #print("🗑️ Folder 'run_output' has been deleted.")
 
 if __name__ == "__main__":
-    main(reset=True)
+    main()
 
 
