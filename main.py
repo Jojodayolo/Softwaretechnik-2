@@ -4,6 +4,7 @@ from OpenAIAPIConnector import OpenAIAPIConnector
 from DeepSeekAPIConnector import DeepSeekAPIConnector
 from webscraper import RecursiveWebScraper
 from pathlib import Path
+import datetime
 
 # main.py
 from TestUtils import (
@@ -13,7 +14,7 @@ from TestUtils import (
 )
 
 def main():
-
+    
     # Ask user to choose the backend
     while True:
         choice = input("Which AI model do you want to use? [openai/deepseek]: ").strip().lower()
@@ -30,7 +31,7 @@ def main():
     else:
         bot = DeepSeekAPIConnector(model="deepseek-chat")
 
-    # Reset only if OpenAI is used 
+    # Reset only if OpenAI is used and before calling it the first time.
     if isinstance(bot, OpenAIAPIConnector):
         bot.reset_state()
         print("🔁 OpenAI bot state reset.\n")
@@ -41,10 +42,10 @@ def main():
     image_bot.reset_state()
     image_bot = OpenAIAPIConnector(model="gpt-4o-mini")
 
-    # Create repository folder
-    base_path = DirectorySetup.setup("run_output")
-    
-    _file_url = "run_output/last_url.txt"
+    # Create unique repository folder
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    base_path = DirectorySetup.setup(f"run_output_{choice}_{timestamp}")
+    _file_url = base_path / "last_url.txt"
     if os.path.exists(_file_url):
         os.remove(_file_url)
     with open(_file_url, "w", encoding="utf-8") as f:
@@ -100,13 +101,6 @@ def main():
     # Only run tests if runTest=True was passed
     #if runTest:
     #    run_pytest_on_generated_tests(base_path)
-
-    # reset at the end for cleanup
-    if isinstance(bot, OpenAIAPIConnector):
-        bot.reset_state()
-        print("🧹 Bot state reset at the end.")
-    #shutil.rmtree(base_path)
-    #print("🗑️ Folder 'run_output' has been deleted.")
 
 if __name__ == "__main__":
     main()

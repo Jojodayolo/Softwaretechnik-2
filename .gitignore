@@ -1,8 +1,7 @@
 *.txt
 scraped_pages
 scraped_pages/** 
-run_output
-run_output/**
+run_output*/
 .vscode/
 __pycache__
 __pycache__/**
