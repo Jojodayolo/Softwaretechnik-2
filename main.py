@@ -27,15 +27,15 @@ def main():
     start_url = input("Please enter the URL to be scraped: ").strip()
 
     if use_openai:
-        bot = OpenAIAPIConnector(model="gpt-4o-mini")
+        bot = OpenAIAPIConnector(model="o3-mini")
     else:
-        bot = DeepSeekAPIConnector(model="deepseek-chat")
+        bot = DeepSeekAPIConnector(model="deepseek-reasoner")
 
     # Reset only if OpenAI is used and before calling it the first time.
     if isinstance(bot, OpenAIAPIConnector):
         bot.reset_state()
         print("🔁 OpenAI bot state reset.\n")
-        bot = OpenAIAPIConnector(model="gpt-4o-mini")  # Re-instantiate after reset
+        bot = OpenAIAPIConnector(model="o3-mini")  # Re-instantiate after reset
 
     # Always reset image bot (always OpenAI)
     image_bot = OpenAIAPIConnector(model="gpt-4o-mini")
@@ -44,7 +44,7 @@ def main():
 
     # Create unique repository folder
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    base_path = DirectorySetup.setup(f"run_output_{choice}_{timestamp}")
+    base_path = DirectorySetup.setup("run_output")
     _file_url = base_path / "last_url.txt"
     if os.path.exists(_file_url):
         os.remove(_file_url)
