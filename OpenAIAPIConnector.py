@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 class OpenAIAPIConnector:
+    TOOL_INCOMPATIBLE_MODELS = {"o3-mini", "o1", "o4-mini"}
 
     def __init__(self, model: str):
         load_dotenv()
@@ -13,30 +14,25 @@ class OpenAIAPIConnector:
             raise ValueError("OPENAI_API_KEY nicht gefunden! .env überprüfen.")
         self.model = model
         self.client = OpenAI(api_key=self.api_key)
-        self.assistant_id = self._load_or_create_assistant_id()
-        self.attached_file_ids = self._load_attached_file_ids()
+        self.uses_assistant = model not in self.TOOL_INCOMPATIBLE_MODELS
+        if self.uses_assistant:
+            self.assistant_id = self._load_or_create_assistant_id()
+            self.attached_file_ids = self._load_attached_file_ids()
 
     def _load_or_create_assistant_id(self) -> str:
         path = "assistant_id.txt"
         if os.path.exists(path):
             with open(path, "r") as f:
-                assistant_id = f.read().strip()
-                print(f"Assistant wiederverwendet: {assistant_id}")
-                return assistant_id
+                return f.read().strip()
 
         assistant = self.client.beta.assistants.create(
             name="Test Generator Assistant",
-            description=(
-                "You are an experienced developer. Analyze the provided file, which includes a scraped website, "
-                "manual test cases, the TEST_URL, and an example test. From this, identify testable features and "
-                "generate Playwright tests compatible with pytest. Use only the TEST_URL given in the file."
-            ),
+            description="You are an experienced developer. Analyze the provided file...",
             model=self.model,
             tools=[{"type": "code_interpreter"}]
         )
-        with open(path, "w") as f:
+        with open("assistant_id.txt", "w") as f:
             f.write(assistant.id)
-        print(f"Neuer Assistant erstellt: {assistant.id}")
         return assistant.id
 
     def _load_attached_file_ids(self):
@@ -45,10 +41,6 @@ class OpenAIAPIConnector:
             with open(path, "r") as f:
                 return set(line.strip() for line in f if line.strip())
         return set()
-
-    def _save_attached_file_id(self, file_id: str):
-        with open("attached_file_ids.txt", "a") as f:
-            f.write(file_id + "\n")
 
     def upload_file_for_assistant(self, file_path: str) -> str:
         with open(file_path, "rb") as f:
@@ -85,23 +77,75 @@ class OpenAIAPIConnector:
         return False
 
     def ask_with_file(self, file_path: str) -> str:
-        file_id = self.upload_file_for_assistant(file_path)
+        if self.uses_assistant:
+            file_id = self.upload_file_for_assistant(file_path)
+            thread = self.client.beta.threads.create()
 
-        # Neuen Thread für diese Anfrage erstellen
-        thread = self.client.beta.threads.create()
-        thread_id = thread.id
-
-        # Assistant für diese Datei konfigurieren
-        self.client.beta.assistants.update(
-            assistant_id=self.assistant_id,
-            tool_resources={
-                "code_interpreter": {
-                    "file_ids": [file_id]
+            self.client.beta.assistants.update(
+                assistant_id=self.assistant_id,
+                tool_resources={
+                    "code_interpreter": {"file_ids": [file_id]}
                 }
-            }
-        )
+            )
 
-        prompt = (
+            prompt = self._build_prompt()
+            self.client.beta.threads.messages.create(
+                thread_id=thread.id,
+                role="user",
+                content=prompt
+            )
+
+            all_answers = []
+            while True:
+                run = self.client.beta.threads.runs.create(
+                    thread_id=thread.id,
+                    assistant_id=self.assistant_id
+                )
+
+                while True:
+                    run_status = self.client.beta.threads.runs.retrieve(
+                        thread_id=thread.id,
+                        run_id=run.id
+                    )
+                    if run_status.status == "completed":
+                        break
+                    elif run_status.status in ["failed", "cancelled", "expired"]:
+                        raise Exception(f"Run fehlgeschlagen: {run_status.status}")
+                    time.sleep(2)
+
+                answer = self._extract_assistant_response(thread.id)
+                all_answers.append(answer)
+
+                if self._should_continue(answer):
+                    self.client.beta.threads.messages.create(
+                        thread_id=thread.id,
+                        role="user",
+                        content="Bitte fahre fort. Wenn nötig, beende mit 'CONTINUE'."
+                    )
+                    time.sleep(2)
+                else:
+                    break
+
+            return "\n\n".join([
+                re.sub(r'(continue|fortsetzung)\s*$', '', a, flags=re.IGNORECASE).strip()
+                for a in all_answers
+            ])
+
+        else:
+            with open(file_path, "r", encoding="utf-8") as f:
+                file_text = f.read()
+
+            prompt = self._build_prompt() + "\n\nDateiinhalt:\n" + file_text
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            return response.choices[0].message.content.strip()
+
+    def _build_prompt(self) -> str:
+        return (
             "The uploaded file contains a scraped web application, test requirements, test URL and an example test.\n\n"
             "1. Analyze only the currently attached file.\n"
             "2. Ignore all previous prompts, contexts, or files.\n"
@@ -114,120 +158,56 @@ class OpenAIAPIConnector:
             "9. Make sure every test class name starts with Test that it can be processed from pytest \n"
         )
 
-        # Prompt an Thread senden
-        self.client.beta.threads.messages.create(
-            thread_id=thread_id,
-            role="user",
-            content=prompt
-        )
-
-        all_answers = []
-
-        while True:
-            run = self.client.beta.threads.runs.create(
-                thread_id=thread_id,
-                assistant_id=self.assistant_id
-            )
-
-            print("Warte auf die Antwort des Assistants...")
-            while True:
-                run_status = self.client.beta.threads.runs.retrieve(
-                    thread_id=thread_id,
-                    run_id=run.id
-                )
-                if run_status.status == "completed":
-                    break
-                elif run_status.status in ["failed", "cancelled", "expired"]:
-                    raise Exception(f"Run fehlgeschlagen: {run_status.status}")
-                time.sleep(2)
-
-            answer = self._extract_assistant_response(thread_id)
-            print("Antwort-Abschnitt empfangen.")
-            all_answers.append(answer)
-
-            if self._should_continue(answer):
-                self.client.beta.threads.messages.create(
-                    thread_id=thread_id,
-                    role="user",
-                    content="Bitte fahre fort. Wenn nötig, beende mit 'CONTINUE'."
-                )
-                time.sleep(2)
-            else:
-                break
-
-        combined = "\n\n".join([
-            re.sub(r'(continue|fortsetzung)\s*$', '', a, flags=re.IGNORECASE).strip()
-            for a in all_answers
-        ])
-        return combined.strip()
-
     def reset_state(self):
-        """Löscht gespeicherte Thread- und Assistant-Dateien."""
         for file in ["thread_id.txt", "assistant_id.txt", "attached_file_ids.txt"]:
             if os.path.exists(file):
                 os.remove(file)
                 print(f"🗑️ {file} gelöscht.")
 
-
-
     def generate_requirements_from_image(self, image_path: str) -> str:
-            """Send an image file (e.g. UI screenshot) to the assistant and get textual test requirements."""
-            # Upload image
-            file_id = self.upload_file_for_assistant(image_path)
+        if not self.uses_assistant:
+            raise NotImplementedError("Bildanalyse ist mit diesem Modell nicht verfügbar.")
 
-            # Create thread
-            thread = self.client.beta.threads.create()
-            thread_id = thread.id
+        file_id = self.upload_file_for_assistant(image_path)
+        thread = self.client.beta.threads.create()
 
-            # No need to update tools since this doesn't use code interpreter (just a simple prompt)
-            prompt = (
-                "This is a screenshot of a web application interface.\n\n"
-                "Analyze the image carefully and generate clear, structured test requirements based on the visible UI. "
-                "Focus specifically on:\n"
-                "1. Testable user interactions (e.g., buttons, inputs, navigation elements)\n"
-                "2. Expected behavior for each element or user action\n"
-                "3. UI components relevant for functional or usability testing\n\n"
-                "Format your response as a numbered list of concise, natural-language test requirements.\n"
-                "- Do NOT write any code\n"
-                "- Avoid vague statements; be specific and practical\n"
-                "- Use clear wording suitable for QA or test case design\n"
+        prompt = (
+            "This is a screenshot of a web application interface.\n\n"
+            "Analyze the image carefully and generate clear, structured test requirements based on the visible UI.\n"
+            "Focus specifically on:\n"
+            "1. Testable user interactions (e.g., buttons, inputs, navigation elements)\n"
+            "2. Expected behavior for each element or user action\n"
+            "3. UI components relevant for functional or usability testing\n\n"
+            "Format your response as a numbered list of concise, natural-language test requirements.\n"
+            "- Do NOT write any code\n"
+            "- Avoid vague statements; be specific and practical\n"
+            "- Use clear wording suitable for QA or test case design\n"
+        )
+
+        self.client.beta.threads.messages.create(
+            thread_id=thread.id,
+            role="user",
+            content=[
+                {"type": "text", "text": prompt},
+                {"type": "image_file", "image_file": {"file_id": file_id}}
+            ]
+        )
+
+        run = self.client.beta.threads.runs.create(
+            thread_id=thread.id,
+            assistant_id=self.assistant_id
+        )
+
+        while True:
+            run_status = self.client.beta.threads.runs.retrieve(
+                thread_id=thread.id,
+                run_id=run.id
             )
+            if run_status.status == "completed":
+                break
+            elif run_status.status in ["failed", "cancelled", "expired"]:
+                raise Exception(f"Run fehlgeschlagen: {run_status.status}")
+            time.sleep(2)
 
-            self.client.beta.threads.messages.create(
-                thread_id=thread_id,
-                role="user",
-                content=[
-                    {
-                        "type": "text",
-                        "text": prompt
-                    },
-                    {
-                        "type": "image_file",
-                        "image_file": {
-                            "file_id": file_id
-                        }
-                    }
-                ]
-            )
-
-            run = self.client.beta.threads.runs.create(
-                thread_id=thread_id,
-                assistant_id=self.assistant_id
-            )
-
-            print("Warte auf Testanforderungen aus dem Bild...")
-
-            while True:
-                run_status = self.client.beta.threads.runs.retrieve(
-                    thread_id=thread_id,
-                    run_id=run.id
-                )
-                if run_status.status == "completed":
-                    break
-                elif run_status.status in ["failed", "cancelled", "expired"]:
-                    raise Exception(f"Run fehlgeschlagen: {run_status.status}")
-                time.sleep(2)
-
-            answer = self._extract_assistant_response(thread_id)
-            print("✅ Anforderungen empfangen.")
-            return answer.strip()
+        answer = self._extract_assistant_response(thread.id)
+        return answer.strip()
